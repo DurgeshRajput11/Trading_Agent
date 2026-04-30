@@ -1,110 +1,124 @@
-# CrowdWisdomTrading – Crypto Prediction Agent System
+#  Multi-Timeframe Crypto Trading System (Hermes Framework)
 
-A modular **multi-agent backend system** for short-term crypto prediction, risk management, and decision-making.
+##  Overview
 
-## Project Overview
+This project implements a rule-based crypto trading system using a multi-agent architecture.
+The system analyzes market data across multiple timeframes (1m and 5m) and generates trading decisions based on trend strength, momentum, and risk control.
 
-This project implements a **multi-agent architecture** to predict short-term (5-minute) crypto price movements and make disciplined trading decisions.
-
-The system integrates:
-- Real-time market data (Binance)
-- Prediction logic
-- Risk management (Kelly Criterion)
-- Feedback loop
-- LLM-based explanation (OpenRouter)
-- External tool integration (Apify)
+The goal is **not to trade frequently**, but to trade **only when signals are meaningful and risk is controlled**.
 
 ---
 
-## ⚙️ Tech Stack
+##  Core Idea
 
-- Python  
-- Binance API  
-- Apify  
-- OpenRouter  
-- NumPy  
-- Custom Agent Architecture (Hermes-style)  
+The system follows a simple but realistic trading philosophy:
 
----
-
-## System Architecture
-
-```
-                 HermesController
-                        ↓
-     ┌────────────── Pipeline ───────────────┐
-     ↓                                       ↓
-Search → Data → Prediction → Risk → Feedback → Output
-                                                ↓
-                                       LLM Explanation
-```
+* Avoid trades in **sideways markets**
+* Prefer **trend confirmation across timeframes**
+* Allow **early entries with reduced confidence**
+* Scale bet size based on **confidence and risk**
 
 ---
 
-## Agents Description
+##  Architecture
 
-### 🔍 SearchAgent
-- Identifies crypto assets (BTC, ETH)
+The system is divided into modular agents:
 
-### DataAgent
-- Fetches real-time OHLC data from Binance API
+### 1. SearchAgent
 
-### 📈 PredictionAgent
-- Uses moving average strategy  
-- Outputs:
-  - `UP` or `DOWN`
-  - Confidence score
+* Identifies assets to trade (currently BTC, ETH)
 
-###  RiskAgent
-- Applies **Kelly Criterion**
-- Caps exposure to prevent over-risking
+### 2. DataAgent
 
-### 🔄 FeedbackAgent
-- Tracks prediction accuracy
-- Simulates learning loop
+* Fetches real-time market data from Binance API
+* Supports multiple timeframes (1m, 5m)
 
-###  HermesController
-- Orchestrates agent execution
-- Controls pipeline flow
+### 3. PredictionAgent
 
----
+* Computes indicators:
 
-## 🔗 External Integrations
+  * Moving Averages (short vs long)
+  * RSI (Relative Strength Index)
+  * ADX (trend strength)
+* Generates:
 
-###  Apify
-- Executes actors programmatically
-- Demonstrates tool integration capability
-
-###  OpenRouter
-- Generates explanation for predictions
-- Used for reasoning (not prediction)
+  * Prediction → `UP / DOWN / NO TRADE`
+  * Confidence score (dynamic)
 
 ---
 
-##  How to Run
+### 4. HermesController (Core Logic)
 
-### 1. Clone repository
-```bash
-git clone <your-repo-link>
-cd project
-```
+Combines multi-timeframe signals:
 
-### 2. Install dependencies
-```bash
-pip install -r requirements.txt
-```
+| Scenario                 | Action                           |
+| ------------------------ | -------------------------------- |
+| Both NO TRADE            | Skip                             |
+| Strong conflict          | Skip                             |
+| Weak conflict            | Allow trade (reduced confidence) |
+| Higher timeframe missing | Skip                             |
+| Both agree               | Strong trade                     |
 
-### 3. Add environment variables
-Create a `.env` file:
-```env
-APIFY_TOKEN=your_apify_token
-OPENROUTER_API_KEY=your_openrouter_key
-```
+---
 
-### 4. Run the project
-```bash
-python main.py
-```
+### 5. RiskAgent
+
+* Calculates bet size using confidence
+* Reduces exposure when:
+
+  * Confidence is low
+  * RSI is extreme (overbought/oversold)
+
+---
+
+### 6. FeedbackAgent
+
+* Simulates trade outcome (for evaluation)
+* Used to track accuracy
+
+---
+
+## ⚙️ Trading Logic
+
+###  Trade is taken when:
+
+* Confidence ≥ **0.45**
+* Market is not sideways (ADX filter)
+* No strong conflict between timeframes
+
+---
+
+###  Trade is skipped when:
+
+* Market is sideways (low ADX)
+* Signals are too weak
+* Strong disagreement across timeframes
+
+---
+
+## Confidence Calculation
+
+Confidence is computed using:
+
+* Moving average difference
+* Momentum
+* Trend strength (ADX)
+
+It is:
+
+* Dynamic (changes every run)
+* Clamped between **0.3 and 0.9**
+* Slightly randomized to avoid deterministic outputs
+
+---
+
+##  Risk Management
+
+* Position size capped at **10%**
+* Reduced for:
+
+  * Confidence < 0.65
+  * Extreme RSI conditions
 
 ---
 
@@ -112,52 +126,56 @@ python main.py
 
 ```
 ASSET | PRED | CONF | BET
-------|------|------|------
-BTC   | DOWN | 0.58 | 16.0%
-ETH   | UP   | 0.58 | 16.0%
-
-LLM: Prediction explanation...
+BTC   | NO TRADE | 0 | 0%
+ETH   | DOWN     | 0.54 | 1.4%
+Reason → WEAK_CONFLICT | 1m(DOWN) & 5m(UP)
 ```
 
 ---
 
-##  Key Design Decisions
+##  Key Features
 
-- Used Binance API instead of scraping for reliability
-- Used Apify to demonstrate scalable integration
-- LLM used only for reasoning, not prediction
-- Risk-first approach using Kelly Criterion
+* Multi-timeframe confirmation
+* Sideways market detection (ADX)
+* Conflict-aware decision making
+* Dynamic confidence scoring
+* Risk-adjusted position sizing
+* Modular agent-based design
 
 ---
 
-##  Insights
+##  Limitations
 
-- Prediction accuracy alone is not enough
-- Risk management is critical
-- System focuses on decision-making under uncertainty
+* No historical backtesting
+* No real profit tracking
+* Indicators are simplified (not production-grade)
+* Feedback is simulated (random)
 
 ---
 
 ##  Future Improvements
 
-- Integrate Kronos model
-- Multi-timeframe analysis
-- Real trading execution
-- Dashboard visualization
-- Better feedback learning
+* Add backtesting engine
+* Replace rules with ML model
+* Portfolio selection (choose best asset)
+* Real-time deployment
+* Sharpe ratio / drawdown metrics
 
 ---
 
-## 👤 Author
+##  Conclusion
 
-**Durgesh Singh**  
-IIIT Una
+This system demonstrates:
+
+* Practical understanding of trading logic
+* Risk-aware decision making
+* Multi-timeframe analysis
+* Modular system design
+
+It prioritizes **consistency and safety over overtrading**, making it closer to real-world trading systems than naive approaches.
 
 ---
 
+## 👨‍💻 Author
 
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome!
-
----
+Durgesh Singh
