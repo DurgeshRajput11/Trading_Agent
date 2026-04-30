@@ -23,7 +23,6 @@ def main():
         apify = ApifyClientWrapper()
         llm = LLMClient()
 
-        # Apify check
         try:
             run_id = apify.test_run()
             logger.info(f"Apify working: {run_id}")
@@ -40,7 +39,23 @@ def main():
 
         for r in results:
             print(f"{r['asset']} | {r['prediction']} | {r['confidence']} | {round(r['bet']*100,2)}%")
-            llm.explain(r["prediction"], r["confidence"])
+
+            # 🔥 SAFE reason (no crash ever)
+            print(f"Reason → {r.get('reason', 'N/A')}")
+
+            if r["prediction"] != "NO TRADE":
+                explanation = llm.explain(
+                    r["asset"],
+                    r["prediction"],
+                    r["confidence"],
+                    r["short_ma"],
+                    r["long_ma"]
+                )
+
+                if explanation:
+                    print(f"LLM → {explanation[:150]}\n")
+            else:
+                print("LLM → Skipped (low confidence)\n")
 
         logger.info("Pipeline completed")
 

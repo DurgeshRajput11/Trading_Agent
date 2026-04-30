@@ -8,7 +8,7 @@ class LLMClient:
     def __init__(self):
         self.api_key = os.getenv("OPENROUTER_API_KEY")
 
-    def explain(self, prediction, confidence):
+    def explain(self, asset, prediction, confidence, short_ma, long_ma):
         try:
             if not self.api_key:
                 logger.warning("No OpenRouter key")
@@ -19,15 +19,25 @@ class LLMClient:
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
-                    "HTTP-Referer": "http://localhost",  
+                    "HTTP-Referer": "http://localhost",
                     "X-Title": "crypto-agent"
                 },
                 json={
-                    "model": "openai/gpt-3.5-turbo", 
+                    "model": "openai/gpt-3.5-turbo",
                     "messages": [
                         {
                             "role": "user",
-                            "content": f"Explain why prediction is {prediction} with confidence {confidence}"
+                            "content": f"""
+Asset: {asset}
+Prediction: {prediction}
+Confidence: {confidence}
+
+Short MA: {round(short_ma,2)}
+Long MA: {round(long_ma,2)}
+
+Explain the prediction based on these moving averages.
+Avoid generic explanations.
+"""
                         }
                     ]
                 },
@@ -35,10 +45,9 @@ class LLMClient:
             )
 
             response.raise_for_status()
-
             data = response.json()
-            logger.info("LLM success")
 
+            logger.info("LLM success")
             return data["choices"][0]["message"]["content"]
 
         except Exception as e:
